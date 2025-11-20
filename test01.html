@@ -155,6 +155,10 @@
             transition: all 0.3s ease;
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
         }
+        .option:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
         .option:nth-child(2n) { margin-right: 0; }
         .option:nth-last-child(-n+2) { margin-bottom: 0; }
         @media (max-width: 600px) {
@@ -172,11 +176,30 @@
             border: 1px solid rgba(34, 139, 34, 0.5);
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
             font-weight: bold;
-            height: 48px;
+            min-height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
+        }
+        .next-button {
+            display: none;
+            padding: 10px 35px;
+            font-size: 16px;
+            background-color: #1e4d5b;
+            color: white;
+            border: none;
+            border-radius: 18px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            margin: 0 auto 20px;
+        }
+        .next-button:hover {
+            background-color: #163842;
+            transform: scale(1.05);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
         }
         .restart-button {
             display: none;
@@ -293,6 +316,7 @@
         <div class="question" id="question"></div>
         <div class="options" id="options"></div>
         <div class="result" id="result"></div>
+        <button class="next-button" id="nextButton">Далі</button>
         <div class="errors-list" id="errorsList"></div>
         <button class="restart-button" id="restartButton">Почати знову</button>
         <audio id="soundRight" src="right.mp3"></audio>
@@ -342,6 +366,9 @@
             document.getElementById('restartButton').onclick = function() {
                 window.location.href = "index.html";
             };
+             document.getElementById('nextButton').onclick = function() {
+                if (quizInstance) quizInstance.moveToNextQuestion();
+            };
         });
 
         document.getElementById('recordDisplay').addEventListener('click', function() {
@@ -360,6 +387,7 @@
                 this.shuffleQuestions();
                 this.showQuestion();
                 this.initRecordDisplay();
+                this.awaitingNext = false;
             }
             initRecordDisplay() {
                 const recordDisplay = document.getElementById('recordDisplay');
@@ -379,6 +407,7 @@
                 }
             }
             showQuestion() {
+                this.awaitingNext = false;
                 const currentQuestion = this.questions[this.currentQuestionIndex];
                 document.getElementById('question').innerText = currentQuestion.question;
                 this.showOptions(currentQuestion.options);
@@ -386,6 +415,7 @@
                 document.getElementById('result').innerText = '';
                 document.getElementById('result').className = 'result';
                 document.getElementById('restartButton').style.display = 'none';
+                document.getElementById('nextButton').style.display = 'none';
                 document.getElementById('errorsList').innerHTML = '';
                  document.getElementById('errorsList').style.display = 'none';
                 this.updateProgress();
@@ -444,29 +474,25 @@
                 }
             }
             checkAnswer(selectedOption) {
-                const soundRight = document.getElementById("soundRight");
-                const soundWrong = document.getElementById("soundWrong");
+                if (this.awaitingNext) return;
+
                 const currentQuestion = this.questions[this.currentQuestionIndex];
                 const selectedText = selectedOption.text;
                 const correctOption = currentQuestion.options.find(option => option.correct);
                 const correctText = correctOption.text;
+
                 if (selectedOption.correct) {
                     this.score++;
-                    document.getElementById('result').innerText = 'Вірно!';
-                    document.getElementById('result').className = 'result correct';
-                    soundRight.currentTime = 0;
-                    soundRight.play();
+                    this.showResultMessage('Вірно!', 'correct');
                 } else {
                     this.errors.push({ question: currentQuestion.question, user: selectedText, correct: correctText });
-                    document.getElementById('result').innerText = `Невірно. Правильна відповідь: ${correctText}`;
-                    document.getElementById('result').className = 'result incorrect';
-                    soundWrong.currentTime = 0;
-                    soundWrong.play();
+                    this.showResultMessage(`Невірно. Правильна відповідь: ${correctText}`, 'incorrect');
                 }
-                this.currentQuestionIndex++;
-                this.moveToNextQuestion();
+                this.finalizeAnswerStep();
             }
             checkAnswerInput(userAnswer) {
+              if (this.awaitingNext) return;
+
               const normalizedAnswer = userAnswer.replace(',', '.');
               const currentQuestion = this.questions[this.currentQuestionIndex];
               const correctOption = currentQuestion.options.find(option => option.correct);
@@ -488,21 +514,37 @@
                 });
                 this.showResultMessage(`Невірно. Правильна відповідь: ${correctOption.text}`, "incorrect");
               }
-              
-              this.currentQuestionIndex++;
-              this.moveToNextQuestion();
+              this.finalizeAnswerStep();
             }
+            
             showResultMessage(text, type) {
                 const result = document.getElementById("result");
                 result.innerText = text;
                 result.className = `result ${type}`;
-                document.getElementById("sound" + (type === "correct" ? "Right" : "Wrong")).play();
+                try {
+                    const sound = document.getElementById("sound" + (type === "correct" ? "Right" : "Wrong"));
+                    if(sound) {
+                        sound.currentTime = 0;
+                        sound.play().catch(e => console.log("Sound error:", e));
+                    }
+                } catch(e) { console.log("Audio not found"); }
             }
+
+            finalizeAnswerStep() {
+                // Disable inputs/buttons
+                const inputs = document.querySelectorAll('.option, .option-input');
+                inputs.forEach(el => el.disabled = true);
+                
+                document.getElementById('nextButton').style.display = 'block';
+                this.awaitingNext = true;
+            }
+
             moveToNextQuestion() {
+                this.currentQuestionIndex++;
                 if (this.currentQuestionIndex < this.questions.length) {
-                    setTimeout(() => this.showQuestion(), 1200);
+                    this.showQuestion();
                 } else {
-                    setTimeout(() => this.showResult(), 200);
+                    this.showResult();
                 }
                 this.updateProgress();
             }
@@ -526,6 +568,8 @@
                 document.getElementById('question').innerText = `Ваш результат: ${score} з ${total}`;
                 document.getElementById('options').innerHTML = '';
                 document.getElementById('result').style.display = 'none';
+                document.getElementById('nextButton').style.display = 'none';
+
                 const errorsList = document.getElementById('errorsList');
                 errorsList.style.display = 'block';
                 errorsList.innerHTML = '<strong>Помилки:</strong><br>';

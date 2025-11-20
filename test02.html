@@ -197,8 +197,6 @@
             checkAnswer(selectedOption, selectedIndex) {
                 if (this.awaitingNext) return;
 
-                const soundRight = document.getElementById("soundRight");
-                const soundWrong = document.getElementById("soundWrong");
                 const currentQuestion = this.questions[this.currentQuestionIndex];
                 const selectedText = selectedOption.text;
 
@@ -218,14 +216,12 @@
                     this.score++;
                     document.getElementById('result').innerText = 'Вірно!';
                     document.getElementById('result').className = 'result correct';
-                    soundRight.currentTime = 0;
-                    soundRight.play();
+                    this.playSound("Right");
                 } else {
                     this.errors.push({ question: currentQuestion.question, user: selectedText, correct: correctText });
                     document.getElementById('result').innerText = `Невірно. Правильна відповідь: ${correctNumber}`;
                     document.getElementById('result').className = 'result incorrect';
-                    soundWrong.currentTime = 0;
-                    soundWrong.play();
+                    this.playSound("Wrong");
                 }
 
                 // Disable option buttons
@@ -236,10 +232,23 @@
                     button.style.cursor = 'not-allowed';
                 });
 
-                // Show next button
+                // Show next button ALWAYS
                 document.getElementById('nextButton').style.display = 'block';
                 this.awaitingNext = true;
             }
+
+            playSound(type) {
+                try {
+                    const sound = document.getElementById("sound" + type);
+                    if(sound) {
+                        sound.currentTime = 0;
+                        sound.play().catch(e => console.log("Sound play failed", e));
+                    }
+                } catch (e) {
+                    console.log("Audio system error");
+                }
+            }
+
             moveToNextQuestion() {
                 this.currentQuestionIndex++;
                 if (this.currentQuestionIndex < this.questions.length) {
@@ -311,6 +320,16 @@
                 this.initRecordDisplay();
             }
         }
+
+        // Add event listener for next button
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById('nextButton').onclick = function () {
+                if (quizInstance) {
+                    quizInstance.moveToNextQuestion();
+                }
+            };
+        });
+
 
         const questions = [
 
