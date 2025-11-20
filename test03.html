@@ -86,6 +86,25 @@
         let quizInstance = null;
         let currentUser = "";
 
+        // Helper function to send data
+        function sendData(action, score = "-", total = "-") {
+            const payload = {
+                username: currentUser,
+                action: action,
+                testName: "ЦІЛІ (Test 03)",
+                score: score,
+                total: total
+            };
+            console.log("Attempting to send data:", payload);
+            
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(response => console.log("Data sent successfully"))
+            .catch(error => console.error("Error sending data:", error));
+        }
+
         document.getElementById('startGameBtn').addEventListener('click', function() {
             const name = document.getElementById('usernameInput').value;
             const pass = document.getElementById('passwordInput').value;
@@ -95,18 +114,7 @@
                 document.getElementById('nameModal').style.display = 'none';
                 // Start quiz
                 startQuiz("multiple-choice");
-                 // Log login
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        username: currentUser,
-                        action: "Login",
-                        testName: "ЦІЛІ (Test 03)",
-                        score: "-",
-                        total: "-"
-                    })
-                });
+                sendData("Login");
             } else {
                 document.getElementById('loginError').style.display = 'block';
             }
@@ -121,7 +129,7 @@
         }
         document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("easyMode").addEventListener("click", () => startQuiz("multiple-choice"));
-            document.getElementById("hardMode").addEventListener("click", () => startQuiz("multiple-choice"));
+            document.getElementById("hardMode").addEventListener("click", () => startQuiz("numeric-input"));
             document.getElementById('restartButton').onclick = function() {
                 window.location.href = "index.html";
             };
@@ -253,17 +261,7 @@
                 const score = this.score;
                 
                  // GOOGLE SHEETS SAVE LOGIC
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        username: currentUser,
-                        action: "Finish",
-                        testName: "ЦІЛІ (Test 03)",
-                        score: score,
-                        total: total
-                    })
-                });
+                sendData("Finish", score, total);
 
                 document.getElementById('question').innerText = `Ваш результат: ${score} з ${total}`;
                 document.getElementById('options').innerHTML = '';

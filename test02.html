@@ -86,6 +86,25 @@
         let quizInstance = null;
         let currentUser = "";
 
+        // Helper function to send data
+        function sendData(action, score = "-", total = "-") {
+            const payload = {
+                username: currentUser,
+                action: action,
+                testName: "RBS-70 (Test 02)",
+                score: score,
+                total: total
+            };
+            console.log("Attempting to send data:", payload);
+            
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(response => console.log("Data sent successfully"))
+            .catch(error => console.error("Error sending data:", error));
+        }
+
         document.getElementById('startGameBtn').addEventListener('click', function() {
             const name = document.getElementById('usernameInput').value;
             const pass = document.getElementById('passwordInput').value;
@@ -95,18 +114,7 @@
                 document.getElementById('nameModal').style.display = 'none';
                 // Start quiz
                 startQuiz("multiple-choice");
-                // Log login
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        username: currentUser,
-                        action: "Login",
-                        testName: "RBS-70 (Test 02)",
-                        score: "-",
-                        total: "-"
-                    })
-                });
+                sendData("Login");
             } else {
                 document.getElementById('loginError').style.display = 'block';
             }
@@ -161,6 +169,7 @@
                 }
             }
             showQuestion() {
+                this.awaitingNext = false;
                 const currentQuestion = this.questions[this.currentQuestionIndex];
                 document.getElementById('question').innerText = currentQuestion.question;
                 this.showOptions(currentQuestion.options);
@@ -172,7 +181,6 @@
                 document.getElementById('errorsList').innerHTML = '';
                 document.getElementById('errorsList').style.display = 'none';
                 this.updateProgress();
-                this.awaitingNext = false;
             }
             showOptions(options) {
                 const optionsContainer = document.getElementById("options");
@@ -262,17 +270,7 @@
                 const score = this.score;
                 
                 // GOOGLE SHEETS SAVE LOGIC
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        username: currentUser,
-                        action: "Finish",
-                        testName: "RBS-70 (Test 02)",
-                        score: score,
-                        total: total
-                    })
-                });
+                sendData("Finish", score, total);
 
                 document.getElementById('question').innerText = `Ваш результат: ${score} з ${total}`;
                 document.getElementById('options').innerHTML = '';

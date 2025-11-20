@@ -329,6 +329,25 @@
         let quizInstance = null;
         let currentUser = "";
 
+        // Helper function to send data
+        function sendData(action, score = "-", total = "-") {
+            const payload = {
+                username: currentUser,
+                action: action,
+                testName: "ПЗРК (Test 01)",
+                score: score,
+                total: total
+            };
+            console.log("Attempting to send data:", payload);
+            
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(response => console.log("Data sent successfully"))
+            .catch(error => console.error("Error sending data:", error));
+        }
+
         document.getElementById('startGameBtn').addEventListener('click', function() {
             const name = document.getElementById('usernameInput').value;
             const pass = document.getElementById('passwordInput').value;
@@ -336,18 +355,7 @@
             if(name.trim().length > 1 && pass === USER_PASSWORD) {
                 currentUser = name;
                 document.getElementById('nameModal').style.display = 'none';
-                // Send LOGIN event
-                 fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        username: currentUser,
-                        action: "Login",
-                        testName: "ПЗРК (Test 01)",
-                        score: "-",
-                        total: "-"
-                    })
-                });
+                sendData("Login");
             } else {
                 document.getElementById('loginError').style.display = 'block';
             }
@@ -553,17 +561,7 @@
                 const score = this.score;
                 
                 // GOOGLE SHEETS SAVE LOGIC
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        username: currentUser,
-                        action: "Finish",
-                        testName: "ПЗРК (Test 01)",
-                        score: score,
-                        total: total
-                    })
-                });
+                sendData("Finish", score, total);
 
                 document.getElementById('question').innerText = `Ваш результат: ${score} з ${total}`;
                 document.getElementById('options').innerHTML = '';
